@@ -1,0 +1,98 @@
+# ==========================
+# Python
+# ==========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# ==========================
+# Environment Variables
+# ==========================
+.env
+.env.*
+!.env.example
+
+# ==========================
+# IDE
+# ==========================
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# ==========================
+# Logs
+# ==========================
+*.log
+logs/
+error.log
+
+# ==========================
+# Database
+# ==========================
+*.db
+*.sqlite
+*.sqlite3
+
+# ==========================
+# AI Models
+# ==========================
+best.pt
+*.onnx
+*.engine
+*.tflite
+*.torchscript
+weights/
+models/
+
+# ==========================
+# Training
+# ==========================
+training/dataset/
+training/runs/
+training/cache/
+training/**/*.cache
+
+# YOLO output
+runs/
+
+# ==========================
+# Snapshots & Uploads
+# ==========================
+snapshots/*
+!snapshots/.gitkeep
+
+uploads/*
+!uploads/.gitkeep
+
+# ==========================
+# Temporary Files
+# ==========================
+*.tmp
+*.temp
+*.bak
+
+# ==========================
+# Node (Frontend)
+# ==========================
+node_modules/
+dist/
+build/
+coverage/
+
+# ==========================
+# OS
+# ==========================
+Thumbs.db
