@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, Circle, ExternalLink, Search, FileDown, Sheet, Eye } from 'lucide-react'
-import { fetchViolations, resolveViolation, acknowledgeViolation, API_BASE } from '../api'
+import { CheckCircle2, Circle, ExternalLink, Search, FileDown, Sheet, Eye, Trash2 } from 'lucide-react'
+import { fetchViolations, resolveViolation, acknowledgeViolation, deleteViolation, clearViolations, API_BASE } from '../api'
 import InsightsCard from '../components/InsightsCard.jsx'
 import HeatmapChart from '../components/HeatmapChart.jsx'
 import IncidentTimeline from '../components/IncidentTimeline.jsx'
@@ -48,6 +48,25 @@ export default function HistoryPage() {
     acknowledgeViolation(id).then(() => {
       setViolations((prev) => prev.map((v) => (v.id === id ? { ...v, acknowledged: true } : v)))
     })
+  }
+
+  const handleDelete = (id) => {
+    if (!window.confirm('Permanently delete this violation and its snapshot? This cannot be undone.')) return
+    deleteViolation(id).then(() => {
+      setViolations((prev) => prev.filter((v) => v.id !== id))
+    })
+  }
+
+  const handleClearAll = () => {
+    const filtered = typeFilter || severityFilter
+    const msg = filtered
+      ? 'Permanently delete all violations matching the current filters (and their snapshots)? This cannot be undone.'
+      : 'Permanently delete the ENTIRE violation log and all snapshots? This cannot be undone.'
+    if (!window.confirm(msg)) return
+    clearViolations({
+      violation_type: typeFilter || undefined,
+      severity: severityFilter || undefined,
+    }).then(() => load())
   }
 
   const exportPDF = async () => {
@@ -113,6 +132,13 @@ export default function HistoryPage() {
               className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider border border-border px-3 py-1.5 rounded-sm text-muted hover:text-ink hover:border-amber/40 transition-colors"
             >
               <FileDown size={13} /> PDF
+            </button>
+            <button
+              onClick={handleClearAll}
+              disabled={violations.length === 0}
+              className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider border border-critical/40 px-3 py-1.5 rounded-sm text-critical hover:bg-critical/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <Trash2 size={13} /> Clear{typeFilter || severityFilter ? ' Filtered' : ' All'}
             </button>
           </div>
         </div>
@@ -233,6 +259,13 @@ export default function HistoryPage() {
                           Resolve
                         </button>
                       )}
+                      <button
+                        onClick={() => handleDelete(v.id)}
+                        title="Permanently delete"
+                        className="text-muted hover:text-critical border border-border hover:border-critical/40 px-1.5 py-1 rounded-sm"
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     </div>
                   </td>
                 </tr>

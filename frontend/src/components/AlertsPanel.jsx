@@ -1,4 +1,4 @@
-import { HardHat, MapPinOff, CheckCircle2, ShieldOff, AlertTriangle, Eye } from 'lucide-react'
+import { HardHat, MapPinOff, CheckCircle2, ShieldOff, AlertTriangle, Eye, Trash2 } from 'lucide-react'
 import { API_BASE } from '../api'
 
 const SEVERITY_STYLE = {
@@ -28,7 +28,7 @@ function timeAgo(iso) {
   return `${Math.floor(diff / 3600)}h ago`
 }
 
-export default function AlertsPanel({ alerts, onAcknowledge, onResolve }) {
+export default function AlertsPanel({ alerts, onAcknowledge, onResolve, onDelete }) {
   return (
     <div className="panel-glass rounded-sm flex flex-col h-full">
       <div className="px-4 py-3.5 border-b border-border flex items-center justify-between">
@@ -55,10 +55,26 @@ export default function AlertsPanel({ alerts, onAcknowledge, onResolve }) {
               }`}
             >
               <div className="flex items-start gap-2.5">
-                <Icon size={16} className="mt-0.5 text-ink/80 shrink-0" strokeWidth={1.75} />
+                <a
+                  href={`${API_BASE}/api/violations/${a.id}/snapshot`}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Open full snapshot"
+                  className="shrink-0"
+                >
+                  <img
+                    src={`${API_BASE}/api/violations/${a.id}/snapshot`}
+                    alt=""
+                    className="w-16 h-12 object-cover rounded-sm border border-border bg-panel2 hover:border-amber/50 transition-colors"
+                    onError={(e) => {
+                      e.target.style.display = 'none'
+                    }}
+                  />
+                </a>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs uppercase tracking-wider truncate">
+                    <span className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider truncate">
+                      <Icon size={13} className="text-ink/80 shrink-0" strokeWidth={1.75} />
                       {a.violation_type.replace('_', ' ')}
                     </span>
                     <span
@@ -79,14 +95,6 @@ export default function AlertsPanel({ alerts, onAcknowledge, onResolve }) {
                       CONF {(a.confidence * 100).toFixed(0)}%
                     </span>
                     <div className="flex items-center gap-2">
-                      <a
-                        href={`${API_BASE}/api/violations/${a.id}/snapshot`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[10px] font-mono uppercase tracking-wider text-muted hover:text-amber"
-                      >
-                        View
-                      </a>
                       {!a.acknowledged && (
                         <button
                           onClick={() => onAcknowledge(a.id)}
@@ -100,6 +108,13 @@ export default function AlertsPanel({ alerts, onAcknowledge, onResolve }) {
                         className="text-[10px] font-mono uppercase tracking-wider text-muted hover:text-ink border border-border px-2 py-0.5 rounded-sm hover:border-safe/40"
                       >
                         Resolve
+                      </button>
+                      <button
+                        onClick={() => onDelete(a.id)}
+                        title="Permanently delete"
+                        className="text-muted hover:text-critical border border-border hover:border-critical/40 px-1.5 py-0.5 rounded-sm"
+                      >
+                        <Trash2 size={11} />
                       </button>
                     </div>
                   </div>

@@ -96,3 +96,4 @@ coverage/
 # OS
 # ==========================
 Thumbs.db
+snapshots/

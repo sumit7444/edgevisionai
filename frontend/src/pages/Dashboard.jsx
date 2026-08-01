@@ -8,7 +8,7 @@ import WorkerStatusPanel from '../components/WorkerStatusPanel.jsx'
 import StatsCharts from '../components/StatsCharts.jsx'
 import ZoneEditor from '../components/ZoneEditor.jsx'
 import Footer from '../components/Footer.jsx'
-import { WS_BASE, fetchStats, fetchZones, deleteZone, resolveViolation, acknowledgeViolation } from '../api.js'
+import { WS_BASE, fetchStats, fetchZones, deleteZone, resolveViolation, acknowledgeViolation, deleteViolation } from '../api.js'
 import { fireViolationNotification } from '../utils/notifications.js'
 
 const CAMERA_ID = 'cam-01'
@@ -147,6 +147,13 @@ export default function Dashboard() {
     })
   }
 
+  const handleDelete = (id) => {
+    if (!window.confirm('Permanently delete this violation and its snapshot? This cannot be undone.')) return
+    deleteViolation(id).then(() => {
+      setAlerts((prev) => prev.filter((a) => a.id !== id))
+    })
+  }
+
   const openZoneEditor = () => {
     const canvas = captureCanvasRef.current
     if (canvas.width > 0) {
@@ -217,7 +224,7 @@ export default function Dashboard() {
           </div>
 
           <div className="h-[560px]">
-            <AlertsPanel alerts={alerts} onAcknowledge={handleAcknowledge} onResolve={handleResolve} />
+            <AlertsPanel alerts={alerts} onAcknowledge={handleAcknowledge} onResolve={handleResolve} onDelete={handleDelete} />
           </div>
         </div>
       </main>

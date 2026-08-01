@@ -1,4 +1,5 @@
 import json
+import os
 from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, Query
@@ -61,6 +62,54 @@ def list_violations(
             )
         )
     return out
+
+
+def _delete_snapshot_file(path: Optional[str]):
+    if path and os.path.exists(path):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
+@router.delete("/{violation_id}")
+def delete_violation(violation_id: str, db: Session = Depends(get_db)):
+    """Permanently deletes one violation and its snapshot file. Cannot be undone."""
+    v = db.query(Violation).filter(Violation.id == violation_id).first()
+    if not v:
+        return {"error": "not found"}
+    _delete_snapshot_file(v.snapshot_path)
+    db.delete(v)
+    db.commit()
+    return {"status": "deleted", "id": violation_id}
+
+
+@router.delete("")
+def clear_violations(
+    violation_type: Optional[str] = None,
+    severity: Optional[str] = None,
+    resolved: Optional[bool] = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Permanently deletes violations and their snapshot files. Cannot be undone.
+    With no filters, clears the entire log — used by the "Clear All" button.
+    Pass the same filters as GET /api/violations to clear only a filtered subset.
+    """
+    q = db.query(Violation)
+    if violation_type:
+        q = q.filter(Violation.violation_type == violation_type)
+    if severity:
+        q = q.filter(Violation.severity == severity)
+    if resolved is not None:
+        q = q.filter(Violation.resolved == resolved)
+
+    rows = q.all()
+    for v in rows:
+        _delete_snapshot_file(v.snapshot_path)
+        db.delete(v)
+    db.commit()
+    return {"status": "cleared", "count": len(rows)}
 
 
 @router.patch("/{violation_id}/acknowledge")
