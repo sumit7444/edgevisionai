@@ -4,14 +4,15 @@ import time
 
 import cv2
 import numpy as np
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 
 from app.database import SessionLocal
 from app.models import Violation, Zone
 from app.detection.detector import detector, SEVERITY_MAP
-from app.detection.zones import check_zone_intrusions
+from app.detection.zones import check_zone_intrusions, find_zone_for_bbox
 from app.detection.tracker import WorkerTracker
 from app.websocket_manager import alert_manager
+from app.viewer_hub import viewer_hub
 from app.config import settings
 
 router = APIRouter()
@@ -56,10 +57,25 @@ def nearest_worker_id(bbox, workers):
 
 
 @router.websocket("/ws/stream/{camera_id}")
-async def stream_endpoint(websocket: WebSocket, camera_id: str):
+async def stream_endpoint(websocket: WebSocket, camera_id: str, mode: str = Query("producer")):
+    """
+    mode=producer (default): sends frames in, gets detections back, runs
+    inference and logs violations. Used by the Dashboard's own webcam and by
+    the RemoteCamera mobile page.
+
+    mode=viewer: sends nothing, just receives whatever a producer for the
+    same camera_id broadcasts (raw frame + detections) so it can be displayed
+    without owning the camera itself — this is how the desktop dashboard
+    watches a phone that's streaming as a remote camera. Also receives
+    violation alerts like any other connection.
+    """
+    if mode == "viewer":
+        await _viewer_loop(websocket, camera_id)
+        return
+
     await alert_manager.connect(websocket)
     db = SessionLocal()
-    last_violation_time = {}  # violation_type -> timestamp, per connection
+    last_violation_time = {}  # violation_type or zone key -> timestamp, per connection
     tracker = WorkerTracker()
 
     try:
@@ -104,9 +120,14 @@ async def stream_endpoint(websocket: WebSocket, camera_id: str):
                 last_violation_time[vtype] = now
 
                 worker_id = nearest_worker_id(det["bbox"], workers)
+                # tag with whichever zone (if any) the violation occurred in,
+                # for the zone-wise compliance breakdown — independent of
+                # zone_intrusion, which is specifically about restricted-zone entry
+                zone = find_zone_for_bbox(det["bbox"], zones, w, h)
 
                 v = Violation(
                     camera_id=camera_id,
+                    zone_id=zone.id if zone else None,
                     worker_track_id=worker_id,
                     violation_type=vtype,
                     severity=SEVERITY_MAP.get(vtype, "medium"),
@@ -126,6 +147,7 @@ async def stream_endpoint(websocket: WebSocket, camera_id: str):
                         "id": v.id,
                         "violation_type": vtype,
                         "worker_track_id": worker_id,
+                        "zone_name": zone.name if zone else None,
                         "severity": v.severity,
                         "confidence": v.confidence,
                         "camera_id": camera_id,
@@ -184,6 +206,21 @@ async def stream_endpoint(websocket: WebSocket, camera_id: str):
                 }
             )
 
+            # relay the same frame + detections to any viewers watching this camera
+            # (e.g. desktop dashboard watching a phone streaming as a remote camera)
+            if viewer_hub.viewer_count(camera_id) > 0:
+                await viewer_hub.broadcast(
+                    camera_id,
+                    {
+                        "type": "frame",
+                        "camera_id": camera_id,
+                        "image": payload["frame"],
+                        "detections": detections,
+                        "workers": workers,
+                        "inference_ms": inference_ms,
+                    },
+                )
+
             for e in events:
                 await alert_manager.broadcast(e)
 
@@ -191,3 +228,19 @@ async def stream_endpoint(websocket: WebSocket, camera_id: str):
         alert_manager.disconnect(websocket)
     finally:
         db.close()
+
+
+async def _viewer_loop(websocket: WebSocket, camera_id: str):
+    await alert_manager.connect(websocket)
+    viewer_hub.register(camera_id, websocket)
+    try:
+        while True:
+            # viewers don't send meaningful data — this just keeps the
+            # connection open and detects disconnects. Client sends an
+            # occasional ping which is ignored.
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        alert_manager.disconnect(websocket)
+        viewer_hub.unregister(camera_id, websocket)

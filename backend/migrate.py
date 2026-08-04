@@ -13,6 +13,7 @@ New columns this adds:
   violations.worker_track_id  (TEXT, nullable)
   violations.acknowledged     (BOOLEAN, default false)
   zones.shape_type            (TEXT, default 'polygon')
+  cameras.source_type         (TEXT, default 'local')
 
 Usage:
   cd backend
@@ -57,6 +58,9 @@ def main():
 
     if "zones" in inspector.get_table_names() and not column_exists(inspector, "zones", "shape_type"):
         statements.append("ALTER TABLE zones ADD COLUMN shape_type VARCHAR DEFAULT 'polygon'")
+
+    if "cameras" in inspector.get_table_names() and not column_exists(inspector, "cameras", "source_type"):
+        statements.append("ALTER TABLE cameras ADD COLUMN source_type VARCHAR DEFAULT 'local'")
 
     if not statements:
         print("Schema already up to date — nothing to do.")

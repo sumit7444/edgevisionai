@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Violation, Camera
-from app.schemas import StatsSummary, CameraCreate, CameraOut, HeatmapCell, InsightOut
+from app.models import Violation, Camera, Zone
+from app.schemas import StatsSummary, CameraCreate, CameraOut, HeatmapCell, InsightOut, ZoneStat
 from app.detection.detector import detector
 from app.state import START_TIME
 from app.config import settings
@@ -60,6 +60,35 @@ def stats_summary(db: Session = Depends(get_db)):
         by_severity=dict(by_severity),
         trend_last_7_days=trend,
     )
+
+
+@router.get("/api/stats/by-zone", response_model=list[ZoneStat])
+def stats_by_zone(db: Session = Depends(get_db)):
+    """
+    Violation counts grouped by the zone they occurred in — covers PPE
+    violations (tagged via find_zone_for_bbox) and zone_intrusion violations
+    alike. A violation with no zone_id (outside any defined zone) is grouped
+    under "Unzoned".
+    """
+    zones_by_id = {z.id: z.name for z in db.query(Zone).all()}
+    grouped = defaultdict(lambda: defaultdict(int))
+
+    for v in db.query(Violation).all():
+        key = v.zone_id or "unzoned"
+        grouped[key][v.violation_type] += 1
+
+    results = []
+    for zone_id, by_type in grouped.items():
+        results.append(
+            ZoneStat(
+                zone_id=None if zone_id == "unzoned" else zone_id,
+                zone_name=zones_by_id.get(zone_id, "Unzoned") if zone_id != "unzoned" else "Unzoned",
+                total=sum(by_type.values()),
+                by_type=dict(by_type),
+            )
+        )
+    results.sort(key=lambda r: r.total, reverse=True)
+    return results
 
 
 @router.get("/api/stats/heatmap", response_model=list[HeatmapCell])
@@ -153,7 +182,15 @@ def safety_insights(db: Session = Depends(get_db)):
 
 @router.post("/api/cameras", response_model=CameraOut)
 def create_camera(cam: CameraCreate, db: Session = Depends(get_db)):
-    c = Camera(name=cam.name, location=cam.location)
+    existing = db.query(Camera).filter(Camera.id == cam.id).first() if cam.id else None
+    if existing:
+        return existing
+    c = Camera(
+        id=cam.id if cam.id else uuid.uuid4().hex[:8],
+        name=cam.name,
+        location=cam.location,
+        source_type=cam.source_type,
+    )
     db.add(c)
     db.commit()
     db.refresh(c)
@@ -163,3 +200,10 @@ def create_camera(cam: CameraCreate, db: Session = Depends(get_db)):
 @router.get("/api/cameras", response_model=list[CameraOut])
 def list_cameras(db: Session = Depends(get_db)):
     return db.query(Camera).all()
+
+
+@router.delete("/api/cameras/{camera_id}")
+def delete_camera(camera_id: str, db: Session = Depends(get_db)):
+    db.query(Camera).filter(Camera.id == camera_id).delete()
+    db.commit()
+    return {"status": "deleted"}

@@ -64,6 +64,13 @@ class HeatmapCell(BaseModel):
     count: int
 
 
+class ZoneStat(BaseModel):
+    zone_id: Optional[str]
+    zone_name: str
+    total: int
+    by_type: dict
+
+
 class InsightOut(BaseModel):
     id: str
     title: str
@@ -72,14 +79,17 @@ class InsightOut(BaseModel):
 
 
 class CameraCreate(BaseModel):
+    id: Optional[str] = None  # custom slug like "cam-02" or "mobile-01"; random UUID if omitted
     name: str
     location: Optional[str] = None
+    source_type: str = "local"  # local | remote
 
 
 class CameraOut(BaseModel):
     id: str
     name: str
     location: Optional[str]
+    source_type: str
     is_active: bool
 
     class Config:

@@ -14,6 +14,7 @@ class Camera(Base):
     id = Column(String, primary_key=True, default=gen_id)
     name = Column(String, nullable=False)
     location = Column(String, nullable=True)
+    source_type = Column(String, default="local")  # local | remote
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

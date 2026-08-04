@@ -38,3 +38,20 @@ def check_zone_intrusions(person_detections, zones, frame_w, frame_h):
             if point_in_polygon(cx, cy, points):
                 intrusions.append((zone, det))
     return intrusions
+
+
+def find_zone_for_bbox(bbox, zones, frame_w, frame_h):
+    """
+    Returns the first zone whose polygon contains the bbox's center point, or
+    None. Used to tag PPE violations (no_hardhat, no_vest, etc.) with a zone
+    for the zone-wise compliance chart — separate from check_zone_intrusions,
+    which is specifically about person feet-position for restricted-zone entry.
+    """
+    x1, y1, x2, y2 = bbox
+    cx = ((x1 + x2) / 2) / frame_w
+    cy = ((y1 + y2) / 2) / frame_h
+    for zone in zones:
+        points = json.loads(zone.points)
+        if point_in_polygon(cx, cy, points):
+            return zone
+    return None
