@@ -4,6 +4,7 @@ import { fetchViolations, resolveViolation, acknowledgeViolation, deleteViolatio
 import InsightsCard from '../components/InsightsCard.jsx'
 import HeatmapChart from '../components/HeatmapChart.jsx'
 import IncidentTimeline from '../components/IncidentTimeline.jsx'
+import ZoneComplianceChart from '../components/ZoneComplianceChart.jsx'
 import Footer from '../components/Footer.jsx'
 
 const SEVERITY_DOT = {
@@ -142,6 +143,8 @@ export default function HistoryPage() {
             </button>
           </div>
         </div>
+
+        <ZoneComplianceChart />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <InsightsCard />
