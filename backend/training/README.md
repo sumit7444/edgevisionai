@@ -162,3 +162,23 @@ yolo predict model=best.pt source=some_test_image.jpg
 Look at mAP50 in the val output — anything above ~0.7 is a reasonable starting
 point for a demo; below that, more epochs or a larger base model (`yolov8s.pt`)
 usually helps.
+
+## Dataset Validation Tool
+Validate any custom YOLO dataset before training to avoid bad labels or corrupted images:
+```bash
+# Validate your dataset
+python backend/app/detection/dataset_validator.py --path path/to/dataset
+
+# Or generate and validate a sample benchmark dataset structure
+python backend/app/detection/dataset_validator.py --create-sample
+```
+
+## Model Evaluation Suite
+Run industrial safety evaluation metrics (precision, recall, mAP@50, mAP@50-95, confusion matrix, inference latency, FPS):
+```bash
+# Run synthetic industrial evaluation report
+python backend/app/detection/evaluator.py --synthetic
+
+# Run pure inference latency & FPS throughput benchmark
+python backend/app/detection/evaluator.py --benchmark
+```
