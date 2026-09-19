@@ -20,3 +20,18 @@ data/snapshots/
 
 # Environment variables
 .env
+
+# Generated YOLO training outputs
+runs/
+
+# Dataset caches
+*.cache
+
+# Raw/generated datasets
+data/raw/
+data/processed/*/images/
+data/processed/*/labels/
+
+# Keep dataset processing scripts/configs
+!data/processed/*.py
+!data/datasets/*.yaml
