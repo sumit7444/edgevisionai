@@ -1,37 +1,106 @@
+# ============================================================
+# EdgeVisionAI - Git Ignore
+# ============================================================
+
+# -----------------------------
 # Python
+# -----------------------------
 __pycache__/
 *.py[cod]
 *.pyo
+*.pyd
 
-# Virtual environment
+# -----------------------------
+# Virtual environments
+# -----------------------------
 .venv/
 venv/
 env/
 
-# YOLO model weights
-*.pt
-
-# Data
-data/videos/
-data/snapshots/
-
-# IDE
-.vscode/
-
-# Environment variables
+# -----------------------------
+# Environment / secrets
+# -----------------------------
 .env
+.env.*
+!.env.example
 
-# Generated YOLO training outputs
-runs/
+# -----------------------------
+# IDE / Editor
+# -----------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# -----------------------------
+# OS files
+# -----------------------------
+.DS_Store
+Thumbs.db
+
+# ============================================================
+# DATASETS
+# ============================================================
+
+# Downloaded external datasets
+datasets/
+
+# Raw datasets
+data/raw/
+
+# Generated/processed datasets
+data/processed/dataset1/
+data/processed/dataset2/
+data/processed/final/
+data/processed/final_before_id_fix/
+
+# Dataset images and labels anywhere under processed data
+data/processed/*/images/
+data/processed/*/labels/
 
 # Dataset caches
 *.cache
 
-# Raw/generated datasets
-data/raw/
-data/processed/*/images/
-data/processed/*/labels/
+# Annotation caches / temporary files
+data/annotations/*.cache
 
-# Keep dataset processing scripts/configs
+# ============================================================
+# YOLO / ULTRALYTICS
+# ============================================================
+
+# Model weights
+*.pt
+*.pth
+*.onnx
+*.engine
+
+# YOLO training outputs
+runs/
+
+# YOLO prediction outputs
+runs/
+predictions/
+inference_results/
+
+# TensorBoard
+runs/*/events.out.tfevents.*
+
+# ============================================================
+# LOGS / TEMPORARY FILES
+# ============================================================
+
+*.log
+*.tmp
+*.temp
+
+# ============================================================
+# KEEP PROJECT SOURCE / CONFIGURATION
+# ============================================================
+
+# Dataset processing scripts are intentionally tracked
 !data/processed/*.py
+
+# Dataset configuration/documentation is intentionally tracked
 !data/datasets/*.yaml
+!data/datasets/*.yml
+!data/datasets/*.md
