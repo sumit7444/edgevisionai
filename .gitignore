@@ -49,6 +49,7 @@ error.log
 # ==========================
 # AI Models
 # ==========================
+*.pt
 best.pt
 *.onnx
 *.engine

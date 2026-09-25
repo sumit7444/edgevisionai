@@ -1,31 +1,19 @@
 """
-Adds columns introduced by the enterprise-dashboard update to an EXISTING
-database, without touching existing rows. Safe to run repeatedly — it only
-adds a column if it isn't already there.
+Database Schema Migration Script for EdgeVision AI.
 
-Needed because SQLAlchemy's `Base.metadata.create_all()` (used in main.py)
-only creates tables that don't exist yet; it never alters a table that's
-already there. So any DB you were running before this update — including
-your Neon production database, not just local SQLite — is still on the old
-schema and needs these columns added by hand.
-
-New columns this adds:
-  violations.worker_track_id  (TEXT, nullable)
-  violations.acknowledged     (BOOLEAN, default false)
-  zones.shape_type            (TEXT, default 'polygon')
-  cameras.source_type         (TEXT, default 'local')
-
-Usage:
-  cd backend
-  python migrate.py                     # uses DATABASE_URL from .env
-  python migrate.py --database-url postgresql://...   # or pass explicitly
+Safely checks and adds newly introduced tables and columns to existing
+Postgres or SQLite databases without data loss.
 """
 import argparse
 from sqlalchemy import create_engine, inspect, text
+from app.database import Base
 
 
 def column_exists(inspector, table, column):
-    return column in [c["name"] for c in inspector.get_columns(table)]
+    try:
+        return column in [c["name"] for c in inspector.get_columns(table)]
+    except Exception:
+        return False
 
 
 def main():
@@ -40,38 +28,66 @@ def main():
         db_url = settings.DATABASE_URL
 
     is_sqlite = db_url.startswith("sqlite")
-    engine = create_engine(db_url)
+    connect_args = {"check_same_thread": False} if is_sqlite else {}
+    engine = create_engine(db_url, connect_args=connect_args)
     inspector = inspect(engine)
 
-    if "violations" not in inspector.get_table_names():
-        print("No 'violations' table found yet — nothing to migrate. It'll be created fresh on next backend start.")
-        return
+    # First ensure all tables exist
+    Base.metadata.create_all(bind=engine)
+    inspector = inspect(engine)
+    tables = inspector.get_table_names()
 
     statements = []
 
-    if not column_exists(inspector, "violations", "worker_track_id"):
-        statements.append("ALTER TABLE violations ADD COLUMN worker_track_id VARCHAR")
+    # Check violations columns
+    if "violations" in tables:
+        if not column_exists(inspector, "violations", "worker_track_id"):
+            statements.append("ALTER TABLE violations ADD COLUMN worker_track_id VARCHAR")
+        if not column_exists(inspector, "violations", "acknowledged"):
+            default = "0" if is_sqlite else "false"
+            statements.append(f"ALTER TABLE violations ADD COLUMN acknowledged BOOLEAN DEFAULT {default}")
+        if not column_exists(inspector, "violations", "acknowledged_by"):
+            statements.append("ALTER TABLE violations ADD COLUMN acknowledged_by VARCHAR")
+        if not column_exists(inspector, "violations", "resolved_by"):
+            statements.append("ALTER TABLE violations ADD COLUMN resolved_by VARCHAR")
+        if not column_exists(inspector, "violations", "resolved_at"):
+            statements.append("ALTER TABLE violations ADD COLUMN resolved_at TIMESTAMP")
+        if not column_exists(inspector, "violations", "evidence_url"):
+            statements.append("ALTER TABLE violations ADD COLUMN evidence_url VARCHAR")
+        if not column_exists(inspector, "violations", "notes"):
+            statements.append("ALTER TABLE violations ADD COLUMN notes TEXT")
 
-    if not column_exists(inspector, "violations", "acknowledged"):
-        default = "0" if is_sqlite else "false"
-        statements.append(f"ALTER TABLE violations ADD COLUMN acknowledged BOOLEAN DEFAULT {default}")
+    # Check cameras columns
+    if "cameras" in tables:
+        if not column_exists(inspector, "cameras", "source_type"):
+            statements.append("ALTER TABLE cameras ADD COLUMN source_type VARCHAR DEFAULT 'local'")
+        if not column_exists(inspector, "cameras", "status"):
+            statements.append("ALTER TABLE cameras ADD COLUMN status VARCHAR DEFAULT 'online'")
+        if not column_exists(inspector, "cameras", "fps"):
+            statements.append("ALTER TABLE cameras ADD COLUMN fps FLOAT DEFAULT 15.0")
+        if not column_exists(inspector, "cameras", "resolution"):
+            statements.append("ALTER TABLE cameras ADD COLUMN resolution VARCHAR DEFAULT '1280x720'")
 
-    if "zones" in inspector.get_table_names() and not column_exists(inspector, "zones", "shape_type"):
-        statements.append("ALTER TABLE zones ADD COLUMN shape_type VARCHAR DEFAULT 'polygon'")
-
-    if "cameras" in inspector.get_table_names() and not column_exists(inspector, "cameras", "source_type"):
-        statements.append("ALTER TABLE cameras ADD COLUMN source_type VARCHAR DEFAULT 'local'")
+    # Check zones columns
+    if "zones" in tables:
+        if not column_exists(inspector, "zones", "shape_type"):
+            statements.append("ALTER TABLE zones ADD COLUMN shape_type VARCHAR DEFAULT 'polygon'")
+        if not column_exists(inspector, "zones", "rules"):
+            statements.append("ALTER TABLE zones ADD COLUMN rules TEXT")
 
     if not statements:
-        print("Schema already up to date — nothing to do.")
+        print("Schema already fully up to date.")
         return
 
     with engine.begin() as conn:
         for stmt in statements:
             print(f"Running: {stmt}")
-            conn.execute(text(stmt))
+            try:
+                conn.execute(text(stmt))
+            except Exception as e:
+                print(f"Warning: could not execute '{stmt}': {e}")
 
-    print(f"\nMigration complete — {len(statements)} column(s) added. No existing rows were modified.")
+    print(f"\nMigration complete — {len(statements)} alteration(s) processed.")
 
 
 if __name__ == "__main__":
