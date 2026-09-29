@@ -42,8 +42,8 @@ Thumbs.db
 # DATASETS
 # ============================================================
 
-# Downloaded external datasets
-datasets/
+# Downloaded external datasets at project root
+/datasets/
 
 # Raw datasets
 data/raw/
