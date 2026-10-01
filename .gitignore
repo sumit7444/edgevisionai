@@ -1,6 +1,8 @@
-# ==========================
+# ============================================================
+# EdgeVisionAI - Git Ignore
+# ============================================================
+
 # Python
-# ==========================
 __pycache__/
 *.py[cod]
 *.pyo
@@ -12,88 +14,110 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Virtual Environment
-venv/
+# Virtual environments
 .venv/
+venv/
 env/
 
-# ==========================
-# Environment Variables
-# ==========================
+# Environment / secrets
 .env
 .env.*
 !.env.example
 
-# ==========================
-# IDE
-# ==========================
+# IDE / Editor
 .vscode/
 .idea/
 *.swp
-.DS_Store
+*.swo
 
-# ==========================
-# Logs
-# ==========================
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs / temporary files
 *.log
 logs/
 error.log
+*.tmp
+*.temp
+*.bak
 
-# ==========================
 # Database
-# ==========================
 *.db
 *.sqlite
 *.sqlite3
 
-# ==========================
-# AI Models
-# ==========================
-best.pt
+# Node / Frontend
+node_modules/
+dist/
+build/
+coverage/
+
+# ============================================================
+# DATASETS
+# ============================================================
+
+/datasets/
+data/raw/
+
+# Generated/processed datasets
+data/processed/dataset1/
+data/processed/dataset2/
+data/processed/final/
+data/processed/final_before_id_fix/
+
+# Dataset images and labels
+data/processed/*/images/
+data/processed/*/labels/
+
+# Dataset caches
+*.cache
+data/annotations/*.cache
+
+# ============================================================
+# YOLO / ULTRALYTICS
+# ============================================================
+
+*.pt
+*.pth
 *.onnx
 *.engine
 *.tflite
 *.torchscript
+
 weights/
 models/
+runs/
+predictions/
+inference_results/
 
-# ==========================
-# Training
-# ==========================
+# TensorBoard
+runs/*/events.out.tfevents.*
+
+# ============================================================
+# Training / generated files
+# ============================================================
+
 training/dataset/
 training/runs/
 training/cache/
 training/**/*.cache
 
-# YOLO output
-runs/
+# ============================================================
+# Snapshots / uploads
+# ============================================================
 
-# ==========================
-# Snapshots & Uploads
-# ==========================
 snapshots/*
 !snapshots/.gitkeep
 
 uploads/*
 !uploads/.gitkeep
 
-# ==========================
-# Temporary Files
-# ==========================
-*.tmp
-*.temp
-*.bak
+# ============================================================
+# KEEP PROJECT SOURCE / CONFIGURATION
+# ============================================================
 
-# ==========================
-# Node (Frontend)
-# ==========================
-node_modules/
-dist/
-build/
-coverage/
-
-# ==========================
-# OS
-# ==========================
-Thumbs.db
-snapshots/
+!data/processed/*.py
+!data/datasets/*.yaml
+!data/datasets/*.yml
+!data/datasets/*.md
